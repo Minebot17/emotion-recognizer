@@ -28,7 +28,7 @@
 
     <!-- Properties Section. Change ND4J versions here, if required -->
     <properties>
-        <dl4j-master.version>1.0.0-beta7</dl4j-master.version>
+        <dl4j-master.version>1.0.0-M1</dl4j-master.version>
         <logback.version>1.2.3</logback.version>
         <java.version>1.8</java.version>
         <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
@@ -60,42 +60,54 @@
 
         <dependency>
             <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-cuda-10.2-platform</artifactId>
+            <artifactId>nd4j-cuda-11.2-platform</artifactId>
             <version>${dl4j-master.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>cuda-platform-redist</artifactId>
+            <version>11.2-8.1-1.5.5</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.deeplearning4j/arbiter-deeplearning4j -->
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>arbiter-deeplearning4j</artifactId>
+            <version>1.0.0-beta7</version>
+        </dependency>
+
 
 
         <!-- Optional, but recommended: if you use CUDA, also use CuDNN. To use this, CuDNN must also be installed -->
         <!-- See: https://deeplearning4j.konduit.ai/config/backends/config-cudnn#using-deeplearning-4-j-with-cudnn -->
+        <!--
+                <dependency>
+                    <groupId>org.deeplearning4j</groupId>
+                    <artifactId>deeplearning4j-cuda-11.2</artifactId>
+                    <version>${dl4j-master.version}</version>
+                </dependency>
+         -->
 
-        <dependency>
-            <groupId>org.deeplearning4j</groupId>
-            <artifactId>deeplearning4j-cuda-10.2</artifactId>
-            <version>${dl4j-master.version}</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
-        </dependency>
-    </dependencies>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+            </dependencies>
 
 
 
-    <build>
-        <plugins>
+            <build>
+                <plugins>
 
-            <!--
-            Maven shade plugin configuration: this is required so that if you build a single JAR file (an "uber-jar")
-            it will contain all the required native libraries, and the backends will work correctly.
-            Used for example when running the following commants
+                    <!--
+                    Maven shade plugin configuration: this is required so that if you build a single JAR file (an "uber-jar")
+                    it will contain all the required native libraries, and the backends will work correctly.
+                    Used for example when running the following commants
 
-            mvn package
-            cd target
-            java -cp deeplearning4j-examples-1.0.0-beta-bin.jar org.deeplearning4j.LenetMnistExample
-            -->
+                    mvn package
+                    cd target
+                    java -cp deeplearning4j-examples-1.0.0-beta-bin.jar org.deeplearning4j.LenetMnistExample
+                    -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -135,6 +147,14 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>11</source>
+                    <target>11</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
