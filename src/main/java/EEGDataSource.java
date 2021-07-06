@@ -17,16 +17,16 @@ public class EEGDataSource implements DataSource {
         {
             SequenceRecordReader featureReader = new CSVSequenceRecordReader(0, ",");
             SequenceRecordReader labelReader = new CSVSequenceRecordReader(0, ",");
-            featureReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_input.csv", 0, 165));
-            labelReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_labels.csv", 0, 165));
-            trainIter = new SequenceRecordReaderDataSetIterator(featureReader, labelReader, 1, 3, false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
+            featureReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_input.csv", 0, 206));
+            labelReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_labels.csv", 0, 206));
+            trainIter = new SequenceRecordReaderDataSetIterator(featureReader, labelReader, 1, 4, false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
         }
         {
             SequenceRecordReader featureReader = new CSVSequenceRecordReader(0, ",");
             SequenceRecordReader labelReader = new CSVSequenceRecordReader(0, ",");
-            featureReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_input.csv", 166, 206));
-            labelReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_labels.csv", 166, 206));
-            testIter = new SequenceRecordReaderDataSetIterator(featureReader, labelReader, 1, 3, false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
+            featureReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_input.csv", 206, 275));
+            labelReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_labels.csv", 206, 275));
+            testIter = new SequenceRecordReaderDataSetIterator(featureReader, labelReader, 1, 4, false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
         }
     }
 

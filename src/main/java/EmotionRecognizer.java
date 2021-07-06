@@ -1,5 +1,7 @@
 import org.datavec.api.records.reader.SequenceRecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVSequenceRecordReader;
+import org.datavec.api.split.CollectionInputSplit;
+import org.datavec.api.split.InputStreamInputSplit;
 import org.datavec.api.split.NumberedFileInputSplit;
 import org.deeplearning4j.datasets.datavec.SequenceRecordReaderDataSetIterator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -18,42 +20,47 @@ import org.nd4j.linalg.dataset.api.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
+import org.nd4j.linalg.indexing.IntervalIndex;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.nd4j.shade.guava.collect.HashMultiset;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class EmotionRecognizer {
 
-    private static final int dataCount = 206;
+    private static final int dataCount = 275;
     private static final float forTrainingPercent = 0.8f;
     private static final int inputElementCount = 256;
-    private static final int labelsCount = 3;
+    private static final int labelsCount = 4;
 
     private static Random rnd;
     private static BufferedReader reader;
     private static DataSetIterator iter;
     private static int forTraining;
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, URISyntaxException {
         rnd = new Random();
         reader = new BufferedReader(new InputStreamReader(System.in));
 
-        System.out.println("What you want to do? (new/train/check/check_one)");
+        System.out.println("What you want to do? (new/train/check/run)");
         String doTypeResponse = reader.readLine();
 
         forTraining = (int)(dataCount * forTrainingPercent) - 1;
-        boolean isCheck = doTypeResponse.startsWith("check");
+        boolean isCheck = doTypeResponse.equals("check");
         SequenceRecordReader featureReader = new CSVSequenceRecordReader(0, ",");
         SequenceRecordReader labelReader = new CSVSequenceRecordReader(0, ",");
         featureReader.initialize(new NumberedFileInputSplit("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\out\\%d_input.csv", isCheck ? forTraining : 0, isCheck ? dataCount : forTraining));
@@ -70,17 +77,46 @@ public class EmotionRecognizer {
             case "check":
                 CheckModel();
                 break;
-            case "check_one":
-
+            case "run":
+                RunPrediction();
                 break;
         }
+    }
 
-        /*MultiLayerNetwork model = ModelSerializer.restoreMultiLayerNetwork("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\\\models\\\\full2layer.model");
-        DataSet allData = iter.next();
+    private static void RunPrediction() throws IOException, InterruptedException, URISyntaxException {
+        String fileName = RequestString("Enter input file name without extension: ", "");
+        CreatePreudoLabels("./" + fileName + ".csv");
+        SequenceRecordReader featureReader = new CSVSequenceRecordReader(0, ",");
+        SequenceRecordReader labelReader = new CSVSequenceRecordReader(0, ",");
+        featureReader.initialize(new CollectionInputSplit(new URI[]{ new URI("./" + fileName + ".csv") }));
+        labelReader.initialize(new CollectionInputSplit(new URI[]{ new URI("./tmp.csv") }));
+        DataSetIterator localIter = new SequenceRecordReaderDataSetIterator(featureReader, labelReader, 1, labelsCount, false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
+        MultiLayerNetwork model = ModelSerializer.restoreMultiLayerNetwork("./model.bin");
+
+        DataSet allData = localIter.next();
+        DataNormalization normalizer = new NormalizerStandardize();
+        normalizer.fit(allData);
+        normalizer.transform(allData);
         INDArray output = model.output(allData.getFeatures());
-        Evaluation eval = new Evaluation(3);
-        eval.eval(allData.getLabels(), output);
-        System.out.println(eval.stats());*/
+        float[] result = new float[labelsCount];
+        long maxIndex = output.shape()[2] - 1;
+        for (int i = 0; i < labelsCount; i++)
+            result[i] = output.getFloat(0, i, (int) maxIndex);
+
+        System.out.println(Arrays.toString(result));
+    }
+
+    private static void CreatePreudoLabels(String inputPath) throws IOException {
+        Scanner sc = new Scanner(Paths.get(inputPath));
+        List<String> lines = new ArrayList<>();
+        try {
+            while (sc.hasNextLine()) {
+                sc.next();
+                lines.add("0");
+            }
+        }
+        catch (NoSuchElementException ignored){}
+        Files.write(Paths.get("./tmp.csv"), lines, StandardCharsets.UTF_8);
     }
 
     private static void CheckModel() throws IOException {
