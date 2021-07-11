@@ -1,7 +1,6 @@
 import org.datavec.api.records.reader.SequenceRecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVSequenceRecordReader;
 import org.datavec.api.split.CollectionInputSplit;
-import org.datavec.api.split.InputStreamInputSplit;
 import org.datavec.api.split.NumberedFileInputSplit;
 import org.deeplearning4j.datasets.datavec.SequenceRecordReaderDataSetIterator;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -13,32 +12,22 @@ import org.deeplearning4j.nn.conf.layers.RnnOutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.util.ModelSerializer;
-import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
-import org.nd4j.linalg.indexing.IntervalIndex;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
-import org.nd4j.shade.guava.collect.HashMultiset;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class EmotionRecognizer {
 
@@ -101,8 +90,9 @@ public class EmotionRecognizer {
         float[] result = new float[labelsCount];
         long maxIndex = output.shape()[2] - 1;
         for (int i = 0; i < labelsCount; i++)
-            result[i] = output.getFloat(0, i, (int) maxIndex);
+            result[i] = output.getFloat(0, i, (int) 0);
 
+        System.out.println("[ 'счастье', 'возбуждение', 'отвращение', 'сострадание' ]");
         System.out.println(Arrays.toString(result));
     }
 
@@ -119,6 +109,18 @@ public class EmotionRecognizer {
         Files.write(Paths.get("./tmp.csv"), lines, StandardCharsets.UTF_8);
     }
 
+    private static int getIndexOfLargest( float[] array )
+    {
+        if ( array == null || array.length == 0 ) return -1; // null or empty
+
+        int largest = 0;
+        for ( int i = 1; i < array.length; i++ )
+        {
+            if ( array[i] > array[largest] ) largest = i;
+        }
+        return largest; // position of the first largest found
+    }
+
     private static void CheckModel() throws IOException {
         String modelName = RequestString("Enter model name to check: ", "");
         boolean isCheckEpoch = RequestBool("Is check many epochs? (default = false)", false);
@@ -126,6 +128,7 @@ public class EmotionRecognizer {
         if (isCheckEpoch)
             epochNumber = RequestInt("Enter epoch to check addition: ", 0) + 1;
 
+        float[] accs = new float[epochNumber];
         for (int i = 0; i < epochNumber; i++){
             MultiLayerNetwork model = ModelSerializer.restoreMultiLayerNetwork("C:\\Users\\serpi\\Desktop\\repos\\EEGSetParser\\run\\models\\" + modelName + (isCheckEpoch && i != 0 ? "_" + (i-1) : "") + ".bin");
             int[] classesCount = new int[labelsCount];
@@ -139,27 +142,20 @@ public class EmotionRecognizer {
                 classesCount[currentClass]++;
 
                 DataSet allData = iter.next();
-                DataNormalization normalizer = new NormalizerStandardize();
-                normalizer.fit(allData);
-                normalizer.transform(allData);
+
                 INDArray output = model.output(allData.getFeatures());
-                Evaluation eval = new Evaluation(labelsCount);
-                eval.eval(allData.getLabels(), output);
+                float[] result = new float[labelsCount];
+                long maxIndex = output.shape()[2] - 1;
+                for (int m = 0; m < labelsCount; m++)
+                    result[m] = output.getFloat(0, m, (int) maxIndex);
 
-                Enumeration keys = ((ConcurrentHashMap) eval.getConfusion().getMatrix()).keys();
-                if (keys.hasMoreElements())
-                {
-                    int actualClass = (Integer) keys.nextElement();
-                    Object[] answers = ((HashMultiset)((ConcurrentHashMap) eval.getConfusion().getMatrix()).get(actualClass)).toArray();
-                    int lastElement = (Integer) answers[answers.length - 1];
-
-                    if (lastElement == actualClass)
-                        correctCount[lastElement]++;
-                    else
-                        notCorrectCount[lastElement]++;
-                }
+                int lastElement = getIndexOfLargest(result);
+                System.out.println(currentClass);
+                System.out.println(Arrays.toString(result));
+                if (lastElement == currentClass)
+                    correctCount[lastElement]++;
                 else
-                    notCorrectCount[currentClass]++;
+                    notCorrectCount[lastElement]++;
             }
 
             float[] percent = new float[labelsCount];
@@ -178,8 +174,11 @@ public class EmotionRecognizer {
                 sum += percent[n];
 
             System.out.println("Acc: " + (sum/(float)labelsCount));
+            accs[i] = (sum/(float)labelsCount);
             iter.reset();
         }
+
+        System.out.println("Index of max acc: " + (getIndexOfLargest(accs) - 1));
     }
 
     private static void TrainExistModel(String existModel) throws IOException {
